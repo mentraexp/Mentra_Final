@@ -1,24 +1,35 @@
-name: Deploy to EC2 on Push
+name: Deploy to EC2
 
 on:
   push:
     branches:
-      - main
+      - main  # or master
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: SSH and Deploy
-      uses: appleboy/ssh-action@v0.1.6
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          cd mentra-app || git clone https://github.com/mentraexp/Mentra_Final.git mentra-app && cd mentra-app
-          git pull
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to EC2
+      run: |
+        ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          cd ~/mentra-app
+          git pull origin main
+
+          cd ~/mentra-app
           npm install
           pm2 restart mentra-backend || pm2 start server.js --name mentra-backend
-          sudo systemctl reload nginx
+
+          sudo cp -r ~/mentra-app/front-end/* /var/www/html/
+          sudo systemctl restart nginx
+        EOF
