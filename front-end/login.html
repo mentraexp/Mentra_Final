@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mentra Login</title>
+</head>
+<body>
+  <h2>Login to Mentra</h2>
+
+  <form id="loginForm">
+    <label>Email:</label><br>
+    <input type="email" id="email" required><br><br>
+
+    <label>Password:</label><br>
+    <input type="password" id="password" required><br><br>
+
+    <button type="submit">Login</button>
+  </form>
+
+  <br><hr><br>
+  <div id="googleButton"></div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch('http://localhost:8000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+      if (!data.success) return alert(data.message || 'Login failed');
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userRole', data.user.role);
+
+      if (data.user.role === 'parent') {
+        window.location.href = 'parent-home.html';
+      } else {
+        window.location.href = 'tutor-home.html';
+      }
+    });
+
+    // Google Login Load
+    window.onload = async () => {
+      const res = await fetch('http://localhost:8000/api/public/google-client-id');
+      const { clientId } = await res.json();
+
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+
+      script.onload = () => {
+        google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleCredentialResponse
+        });
+
+        google.accounts.id.renderButton(
+          document.getElementById("googleButton"),
+          { theme: "outline", size: "large" }
+        );
+      };
+    };
+
+    async function handleGoogleCredentialResponse(response) {
+  try {
+    const res = await fetch('http://localhost:8000/api/auth/google-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken: response.credential })
+    });
+
+    const data = await res.json();
+
+    if (data.success && data.user) {
+      // ✅ Existing user
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userRole', data.user.role);
+      window.location.href = data.user.role === 'parent' ? 'parent-home.html' : 'tutor-home.html';
+    } else {
+      // 🚧 New user – needs to complete phone/role
+      localStorage.setItem('googleIdToken', response.credential);
+      window.location.href = 'google-role.html';
+    }
+  } catch (err) {
+    alert('Google login failed.');
+  }
+}
+
+  </script>
+</body>
+</html>

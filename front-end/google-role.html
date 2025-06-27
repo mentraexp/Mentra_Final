@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mentra - Complete Google Sign-Up</title>
+</head>
+<body>
+  <h2>Complete Your Signup</h2>
+
+  <form id="completeForm">
+    <label>Phone Number:</label><br>
+    <input type="text" id="phone" required><br><br>
+
+    <label>Select Role:</label><br>
+    <select id="role" required>
+      <option value="">-- Select --</option>
+      <option value="parent">Parent</option>
+      <option value="tutor">Tutor</option>
+    </select><br><br>
+
+    <div id="pincodeDiv" style="display:none;">
+      <label>Pincode:</label><br>
+      <input type="text" id="pincode"><br><br>
+    </div>
+
+    <button type="submit">Complete Signup</button>
+  </form>
+
+  <script>
+    const roleField = document.getElementById('role');
+    const pincodeDiv = document.getElementById('pincodeDiv');
+
+    // Show pincode field only for tutor
+    roleField.addEventListener('change', () => {
+      pincodeDiv.style.display = roleField.value === 'tutor' ? 'block' : 'none';
+    });
+
+    document.getElementById('completeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const token = localStorage.getItem('googleIdToken');
+      const phone = document.getElementById('phone').value.trim();
+      const role = document.getElementById('role').value;
+      const pincode = document.getElementById('pincode').value.trim();
+
+      if (!token) {
+        alert('Google token missing. Please login again.');
+        window.location.href = 'login.html';
+        return;
+      }
+
+      try {
+        const res = await fetch('http://localhost:8000/api/auth/complete-google-signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, role, phone, pincode })
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+          alert(data.message || 'Signup failed');
+          return;
+        }
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userRole', data.user.role);
+
+        if (data.user.role === 'parent') {
+          window.location.href = 'parent-home.html';
+        } else {
+          window.location.href = 'tutor-home.html';
+        }
+      } catch (err) {
+        alert('Something went wrong while completing signup.');
+      }
+    });
+  </script>
+</body>
+</html>

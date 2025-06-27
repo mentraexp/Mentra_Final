@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mentra - Tutor Dashboard</title>
+</head>
+<body>
+  <h2 id="greeting">Loading...</h2>
+  <button id="logoutBtn">Logout</button>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const userRole = localStorage.getItem('userRole');
+
+    // Protect the page
+    if (!token || userRole !== 'tutor') {
+      alert('Access denied. Please login as tutor.');
+      window.location.href = 'login.html';
+    } else {
+      // Optionally fetch user data or greet
+      document.getElementById('greeting').innerText = 'Welcome, Tutor!';
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('userRole');
+      window.location.href = 'login.html';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Parent Dashboard</title>
+  <script>
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('userRole');
+  
+    if (!token || !role) {
+      alert('Please login first');
+      window.location.href = 'login.html';
+    }
+  
+    // Optionally validate role match for extra safety
+    const expectedRole = 'parent'; // or 'tutor'
+    if (role !== expectedRole) {
+      alert('Access denied');
+      window.location.href = 'login.html';
+    }
+  </script>
+  
+</head>
+<body>
+  <h1>Welcome Parent!</h1>
+  <p>This is your parent dashboard.</p>
+  <button onclick="logout()">Logout</button>
+
+  <script>
+    function logout() {
+      localStorage.clear();
+      window.location.href = 'login.html';
+    }
+  </script>
+</body>
+</html>

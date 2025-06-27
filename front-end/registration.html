@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mentra - Register</title>
+</head>
+<body>
+  <h1>Mentra Registration</h1>
+
+  <form id="registerForm">
+    <label>Role:</label><br>
+    <select id="role" required>
+      <option value="">--Select--</option>
+      <option value="parent">Parent</option>
+      <option value="tutor">Tutor</option>
+    </select><br><br>
+
+    <label>Name:</label><br>
+    <input type="text" id="name" required><br><br>
+
+    <label>Email:</label><br>
+    <input type="email" id="email" required><br><br>
+
+    <label>Phone:</label><br>
+    <input type="text" id="phone" required><br><br>
+
+    <label>Password:</label><br>
+    <input type="password" id="password" required><br><br>
+
+    <div id="tutorFields" style="display:none;">
+      <label>Pincode:</label><br>
+      <input type="text" id="pincode"><br><br>
+    </div>
+
+    <button type="submit">Register</button>
+  </form>
+
+  <p>Already have an account? <a href="login.html">Login here</a></p>
+
+  <script>
+    const roleSelect = document.getElementById('role');
+    const tutorFields = document.getElementById('tutorFields');
+
+    roleSelect.addEventListener('change', () => {
+      tutorFields.style.display = roleSelect.value === 'tutor' ? 'block' : 'none';
+    });
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const role = document.getElementById('role').value;
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+      const phone = document.getElementById('phone').value;
+      const password = document.getElementById('password').value;
+      const pincode = document.getElementById('pincode').value;
+
+      const payload = { name, email, phone, password, role };
+      if (role === 'tutor') payload.pincode = pincode;
+
+      try {
+        const res = await fetch('http://localhost:8000/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(data.message || 'Registration failed');
+        } else {
+          alert('Registration successful! Check your email to verify.');
+          window.location.href = 'login.html';
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Something went wrong.');
+      }
+    });
+  </script>
+</body>
+</html>
