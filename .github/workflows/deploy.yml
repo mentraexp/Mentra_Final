@@ -36,6 +36,9 @@ jobs:
           pm2 restart mentra-backend || pm2 start server.js --name mentra-backend
           pm2 save
 
+          # Replace localhost with public IP in HTML
+          find ~/mentra-app/front-end -type f -name "*.html" -exec sed -i 's|localhost:8000|13.127.149.253:8000|g' {} +
+
           # Deploy frontend to Nginx
           sudo rm -rf /var/www/html/*
           sudo cp -r ~/mentra-app/front-end/* /var/www/html/
