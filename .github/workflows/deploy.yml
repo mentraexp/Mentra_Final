@@ -3,17 +3,17 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # or master
+      - main  # Change if your default branch is different
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
+    - name: Checkout source code
       uses: actions/checkout@v3
 
-    - name: Setup SSH
+    - name: Setup SSH key
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
@@ -23,13 +23,23 @@ jobs:
     - name: Deploy to EC2
       run: |
         ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          # Navigate to the app directory
           cd ~/mentra-app
+
+          # Pull latest code
           git pull origin main
 
-          cd ~/mentra-app
+          # Install backend dependencies
           npm install
-          pm2 restart mentra-backend || pm2 start server.js --name mentra-backend
 
+          # Restart backend via PM2
+          pm2 restart mentra-backend || pm2 start server.js --name mentra-backend
+          pm2 save
+
+          # Deploy frontend to Nginx
+          sudo rm -rf /var/www/html/*
           sudo cp -r ~/mentra-app/front-end/* /var/www/html/
+          sudo chown -R www-data:www-data /var/www/html
+          sudo chmod -R 755 /var/www/html
           sudo systemctl restart nginx
         EOF
