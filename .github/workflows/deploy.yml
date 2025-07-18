@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # Change if your default branch is different
+      - main
 
 jobs:
   deploy:
@@ -23,26 +23,33 @@ jobs:
     - name: Deploy to EC2
       run: |
         ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-          # Navigate to the app directory
-          cd ~/mentra-app
+          set -e  # Exit on error
 
-          # Pull latest code
+          echo "🚀 Pulling latest code..."
+          cd ~/mentra-app
+          git reset --hard HEAD        # Clean old files
           git pull origin main
 
-          # Install backend dependencies
+          echo "📦 Installing backend dependencies..."
           npm install
 
-          # Restart backend via PM2
+          echo "🔁 Restarting backend via PM2..."
           pm2 restart mentra-backend || pm2 start server.js --name mentra-backend
           pm2 save
 
-          # Replace localhost with public IP in HTML
+          echo "🌐 Replacing localhost with public IP in frontend..."
           find ~/mentra-app/front-end -type f -name "*.html" -exec sed -i 's|localhost:8000|13.127.149.253:8000|g' {} +
 
-          # Deploy frontend to Nginx
+          echo "🧹 Clearing old frontend from Nginx..."
           sudo rm -rf /var/www/html/*
+
+          echo "📂 Copying updated frontend to Nginx..."
           sudo cp -r ~/mentra-app/front-end/* /var/www/html/
           sudo chown -R www-data:www-data /var/www/html
           sudo chmod -R 755 /var/www/html
+
+          echo "🔁 Restarting Nginx..."
           sudo systemctl restart nginx
+
+          echo "✅ Deployment Complete"
         EOF
