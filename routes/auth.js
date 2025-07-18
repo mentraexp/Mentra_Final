@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
+// const crypto = require('crypto');
+const { sendMail, sendOtpMail } = require('../utils/mailer');
 
 const User = require('../models/User');
 const Parent = require('../models/Parent');
 const Tutor = require('../models/Tutor');
 const VerificationToken = require('../models/VerificationToken');
-const sendMail = require('../utils/mailer');
+
 
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
@@ -297,5 +298,58 @@ router.post('/complete-google-signup', async (req, res) => {
     return res.status(500).json({ success: false, message: 'Google signup failed.', error: e.message });
   }
 });
+
+
+const OtpToken = require('../models/OtpToken');
+const crypto = require('crypto');
+
+router.post('/forgot-password/send-otp', async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
+
+    await OtpToken.deleteMany({ email }); // Clear old OTPs
+    await OtpToken.create({ email, otp, expiresAt });
+
+    await sendOtpMail(email, otp); // ✅ Hardcoded email content
+
+    res.json({ success: true, message: 'OTP sent to your email.' });
+  } catch (e) {
+    console.error('Error sending OTP:', e);
+    res.status(500).json({ success: false, message: 'Error sending OTP', error: e.message });
+  }
+});
+
+
+router.post('/forgot-password/reset', async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+  try {
+    const record = await OtpToken.findOne({ email, otp });
+    if (!record || new Date() > record.expiresAt) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+    }
+
+    if (!/^.{8,}$/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters, contain an uppercase letter and a number.'
+      });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await User.findOneAndUpdate({ email }, { password: hashed });
+
+    await OtpToken.deleteMany({ email }); // cleanup
+
+    res.json({ success: true, message: 'Password reset successful' });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Password reset failed', error: e.message });
+  }
+});
+
 
 module.exports = router;
